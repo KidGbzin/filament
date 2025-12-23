@@ -1,0 +1,26 @@
+material {
+    name : "EmissiveBlackAlpha",
+    shadingModel : unlit,
+    blending : transparent,
+    depthWrite : false,
+    doubleSided : true,
+    culling : none
+}
+
+parameters {
+    sampler2d emissiveTex;
+    float cutoff;
+}
+
+fragment {
+    vec4 tex = texture(materialParams_emissiveTex, getUV0());
+
+    // Black -> alpha
+    float alpha = max(tex.r, max(tex.g, tex.b));
+    if (alpha < materialParams_cutoff) {
+        discard;
+    }
+
+    material.emissive = tex.rgb;
+    material.baseColor.a = alpha;
+}

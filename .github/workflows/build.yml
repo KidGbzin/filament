@@ -1,0 +1,45 @@
+name: Build Filament Materials
+
+on:
+  push:
+    paths:
+      - "materials/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y clang cmake ninja-build \
+            libx11-dev libxinerama-dev libxcursor-dev libxi-dev
+
+      - name: Clone Filament
+        run: |
+          git clone https://github.com/google/filament.git --depth=1
+
+      - name: Build Filament tools
+        run: |
+          cd filament
+          ./build.sh release
+
+      - name: Compile materials
+        run: |
+          mkdir -p out
+          for mat in materials/*.mat; do
+            ./filament/out/cmake-release/tools/matc \
+              "$mat" \
+              -o "out/$(basename ${mat%.mat}.filamat)"
+          done
+
+      - name: Upload filamat artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: filamat
+          path: out/*.filamat
