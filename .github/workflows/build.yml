@@ -1,62 +1,73 @@
-name: Build Filament (matc)
+name: Build Filament matc
 
 on:
   push:
-    branches:
-      - "**"
-  workflow_dispatch:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       # ------------------------------------------------------------
-      # Checkout
+      # Checkout (COM submodules)
       # ------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       # ------------------------------------------------------------
-      # Dependências (Ubuntu 24.04 compatível)
+      # Dependências do sistema
       # ------------------------------------------------------------
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             clang \
-            cmake \
             ninja-build \
+            cmake \
+            git \
             python3 \
-            python3-setuptools \
-            libx11-dev \
-            libxcursor-dev \
-            libxrandr-dev \
-            libxi-dev \
-            libgl1-mesa-dev
+            python3-pip
 
       # ------------------------------------------------------------
-      # Configure (FORÇA C++17)
+      # Verificação estrutural (DEBUG)
       # ------------------------------------------------------------
-      - name: Configure Filament
+      - name: Debug repository tree
         run: |
-          cmake -S . -B out/cmake-release \
+          echo "==== ROOT ===="
+          ls -la
+          echo "==== FILAMENT DIR ===="
+          ls -la filament
+          echo "==== CMakeLists.txt ===="
+          find filament -maxdepth 2 -name CMakeLists.txt
+
+      # ------------------------------------------------------------
+      # Configuração do build
+      # ------------------------------------------------------------
+      - name: Configure Filament (Release)
+        run: |
+          cmake -S filament -B out/cmake-release \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_STANDARD=11 \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
             -DCMAKE_CXX_STANDARD=17 \
             -DCMAKE_CXX_STANDARD_REQUIRED=ON \
             -DCMAKE_CXX_EXTENSIONS=OFF
 
       # ------------------------------------------------------------
-      # Build SOMENTE o matc
+      # Build
       # ------------------------------------------------------------
-      - name: Build matc
+      - name: Build Filament
         run: |
           cmake --build out/cmake-release --target matc
 
       # ------------------------------------------------------------
-      # Artifact
+      # Publicar artefato (matc)
       # ------------------------------------------------------------
       - name: Upload matc binary
         uses: actions/upload-artifact@v4

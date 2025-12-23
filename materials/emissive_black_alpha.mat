@@ -15,7 +15,7 @@ parameters {
 fragment {
     vec4 tex = texture(materialParams_emissiveTex, getUV0());
 
-    // Black -> alpha.
+    // Black -> alpha
     float alpha = max(tex.r, max(tex.g, tex.b));
     if (alpha < materialParams_cutoff) {
         discard;
