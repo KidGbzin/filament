@@ -1,9 +1,9 @@
-name: Build Filament Materials
+name: Build Filament (matc)
 
 on:
   push:
-    paths:
-      - "materials/**"
+    branches:
+      - "**"
   workflow_dispatch:
 
 jobs:
@@ -11,42 +11,55 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ------------------------------------------------------------
+      # Checkout do repositório
+      # ------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      # ------------------------------------------------------------
+      # Dependências do sistema
+      # ------------------------------------------------------------
+      - name: Install system dependencies
         run: |
-          sudo apt update
-          sudo apt install -y \
-            clang lld \
-            cmake ninja-build \
-            libx11-dev libxinerama-dev libxcursor-dev libxi-dev
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            cmake \
+            ninja-build \
+            python3 \
+            python3-distutils \
+            libx11-dev \
+            libxcursor-dev \
+            libxrandr-dev \
+            libxi-dev \
+            libgl1-mesa-dev
 
-      - name: Force Clang compiler
+      # ------------------------------------------------------------
+      # Configuração do CMake (FORÇANDO C++17)
+      # ------------------------------------------------------------
+      - name: Configure Filament
         run: |
-          echo "CC=clang" >> $GITHUB_ENV
-          echo "CXX=clang++" >> $GITHUB_ENV
+          cmake -S . -B out/cmake-release \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_STANDARD=11 \
+            -DCMAKE_CXX_STANDARD=17 \
+            -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+            -DCMAKE_CXX_EXTENSIONS=OFF
 
-      - name: Clone Filament
+      # ------------------------------------------------------------
+      # Build (matc será gerado)
+      # ------------------------------------------------------------
+      - name: Build Filament
         run: |
-          git clone https://github.com/google/filament.git --depth=1
+          cmake --build out/cmake-release --target matc
 
-      - name: Build Filament tools (matc)
-        run: |
-          cd filament
-          ./build.sh release
-
-      - name: Compile materials
-        run: |
-          mkdir -p out
-          for mat in materials/*.mat; do
-            ./filament/out/cmake-release/tools/matc \
-              "$mat" \
-              -o "out/$(basename "${mat%.mat}.filamat")"
-          done
-
-      - name: Upload compiled filamat
+      # ------------------------------------------------------------
+      # Upload do matc como artifact
+      # ------------------------------------------------------------
+      - name: Upload matc binary
         uses: actions/upload-artifact@v4
         with:
-          name: filamat
-          path: out/*.filamat
+          name: matc-linux
+          path: out/cmake-release/tools/matc/matc
